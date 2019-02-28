@@ -13,6 +13,7 @@
     "dotenv": "^6.2.0",
     "mkdirp": "^0.5.1",
     "pdfkit": "^0.9.0",
+    "promise.bar": "^0.1.5",
     "request": "^2.88.0",
     "request-promise-native": "^1.0.7",
     "rss-parser": "^3.6.3",

@@ -8,6 +8,8 @@ const parse = require('url-parse');
 const path = require("path");
 const mkdirp = require("mkdirp");
 const http = require("http");
+const PromiseBar = require("promise.bar");
+PromiseBar.enable();
 
 const agent = new http.Agent({maxSockets: process.env.CONNECTIONS, keepAlive: true});
 const parser = new Parser({item: ["title"]});
@@ -32,7 +34,7 @@ const getHrefsFromFeed = (feed) => {
       .get()
       .filter((element) => element != null);
     // Reddit title is more reliable than imgur titles (may be null)
-    links.push(item.title.replace("/", "-"));
+    links.push(item.title.replace("/", "-").trim());
     return links;
   });
 }
@@ -89,7 +91,7 @@ const extendMetaData = (hrefObjs) => {
  * @param {Array<Object>} extendObjs Array of Objects with keys: poster, subreddit, link, comments, title, subredditSource, and imgurHash.
  */
 const downloadImages = (extendObjs) => {
-    return Promise.all(extendObjs.map((extendObj) => {
+  return Promise.all(extendObjs.map((extendObj) => {
     const destinationBase = path.join(process.env.DESTINATION, extendObj.subredditSource, extendObj.title);
     if (!fs.existsSync(destinationBase)) {
       mkdirp.sync(destinationBase);
@@ -122,7 +124,7 @@ const downloadAlbum = (imgurHash, destinationBase) => {
       }
     })
     .then((links) => {
-      return Promise.all(links.map((link, pageNum) => {
+      return PromiseBar.all(links.map((link, pageNum) => {
         const options = {
           uri: link.link,
           encoding: null,
@@ -136,10 +138,8 @@ const downloadAlbum = (imgurHash, destinationBase) => {
         const filepath =  path.join(destinationBase, filename);
 
         if (fs.existsSync(filepath)) {
-          console.log(`${filepath} already exists...skipping fetch`);
           return Promise.resolve(filepath);
         } else {
-          console.log(`${filepath}...fetching`);
         }
 
         return rp(options)
@@ -155,7 +155,7 @@ const downloadAlbum = (imgurHash, destinationBase) => {
             console.error(link);
             console.error("---");
           });
-      }));
+      }), {label: path.basename(destinationBase)});
     })
     .then((filePaths) => {
       if (filePaths.length < 1) {
@@ -165,7 +165,6 @@ const downloadAlbum = (imgurHash, destinationBase) => {
       const title = path.basename(path.dirname(filePaths[0]));
       const filepath = path.join(destinationBase, `${title}.pdf`);
       if (fs.existsSync(filepath)) {
-        console.log(`${filepath} already exists...skipping create`);
         return;
       }
 
@@ -191,5 +190,4 @@ parser.parseURL(process.env.REDDIT_SAVED_RSS_FEED)
   .then(getImgurPosts)
   .then(extendMetaData)
   .then(downloadImages)
-  .then(() => console.log("done"))
   .catch(console.error);
