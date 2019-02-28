@@ -13,6 +13,7 @@ const Queue = require("better-queue");
 
 PromiseBar.enable();
 
+const connections = (process.env.CONNECTIONS) ? process.env.CONNECTIONS : 10;
 const agent = new http.Agent({maxSockets: process.env.CONNECTIONS, keepAlive: true});
 const parser = new Parser({item: ["title", "id"]});
 
