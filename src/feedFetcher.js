@@ -9,18 +9,21 @@ const path = require("path");
 const mkdirp = require("mkdirp");
 const http = require("http");
 const PromiseBar = require("promise.bar");
+const Queue = require("better-queue");
+
 PromiseBar.enable();
 
 const agent = new http.Agent({maxSockets: process.env.CONNECTIONS, keepAlive: true});
-const parser = new Parser({item: ["title"]});
+const parser = new Parser({item: ["title", "id"]});
 
 /**
  * Retrieves reddit feed and converts each entry into a length 4 array of poster, subreddit, link, comments, and title.
  * 
  * @param {Parser.feed} feed Parser feed object.
+ * @param {requestCallback} fetchMore
  */
-const getHrefsFromFeed = (feed) => {
-  return feed.items.map((item) => {
+const getHrefsFromFeed = (feed, fetchMore) => {
+  const feedLinks = feed.items.map((item) => {
     if (process.env.ENABLE_LOG_SUMMARY === "true") {
       console.log("---");
       console.log(`title: ${item.title}`);
@@ -37,6 +40,12 @@ const getHrefsFromFeed = (feed) => {
     links.push(item.title.replace("/", "-").trim());
     return links;
   });
+
+  if (fetchMore && feed.items.length > 0) {
+    fetchMore(feed.items[feed.items.length - 1].id);
+  }
+
+  return feedLinks;
 }
 
 /**
@@ -124,7 +133,7 @@ const downloadAlbum = (imgurHash, destinationBase) => {
       }
     })
     .then((links) => {
-      return PromiseBar.all(links.map((link, pageNum) => {
+      return Promise.all(links.map((link, pageNum) => {
         const options = {
           uri: link.link,
           encoding: null,
@@ -138,8 +147,10 @@ const downloadAlbum = (imgurHash, destinationBase) => {
         const filepath =  path.join(destinationBase, filename);
 
         if (fs.existsSync(filepath)) {
+          console.log(`${path.basename(destinationBase)}...skipping ${pageNum} / ${links.length - 1}`);
           return Promise.resolve(filepath);
         } else {
+          console.log(`${path.basename(destinationBase)}...fetching ${pageNum} / ${links.length - 1}`);
         }
 
         return rp(options)
@@ -155,7 +166,7 @@ const downloadAlbum = (imgurHash, destinationBase) => {
             console.error(link);
             console.error("---");
           });
-      }), {label: path.basename(destinationBase)});
+      }));
     })
     .then((filePaths) => {
       if (filePaths.length < 1) {
@@ -164,9 +175,12 @@ const downloadAlbum = (imgurHash, destinationBase) => {
 
       const title = path.basename(path.dirname(filePaths[0]));
       const filepath = path.join(destinationBase, `${title}.pdf`);
-      if (fs.existsSync(filepath)) {
-        return;
-      }
+      // if (fs.existsSync(filepath)) {
+      //   console.log(`${path.basename(path.dirname(filepath))}...pdf skipping`);
+      //   return;
+      // } else {
+      //   console.log(`${path.basename(path.dirname(filepath))}...pdf creating`);
+      // }
 
       const doc = new PDFDocument({autoFirstPage: false});
       doc.pipe(fs.createWriteStream(filepath)); 
@@ -181,13 +195,45 @@ const downloadAlbum = (imgurHash, destinationBase) => {
       
       doc.end();
     })
+    .catch((error) => {
+      if (error.message) {
+        console.error(error.message);
+      } else {
+        console.error(error);
+      }
+    });
+}
+
+const fetchMore = (id) => {
+  console.log(id);
+  queue.push(id);
+}
+
+const fetchFeed = (after, cb) => {
+  let url = process.env.REDDIT_SAVED_RSS_FEED;
+  if (after) {
+    url = `${url}&after=${after}`;
+  }
+
+  parser.parseURL(url)
+    .then((feed) => getHrefsFromFeed(feed, fetchMore))
+    .then(convertHrefsToObjects)
+    .then(getImgurPosts)
+    .then(extendMetaData)
+    .then(downloadImages)
+    .then(() => cb(null, true))
     .catch(console.error);
 }
 
-parser.parseURL(process.env.REDDIT_SAVED_RSS_FEED)
-  .then(getHrefsFromFeed)
-  .then(convertHrefsToObjects)
-  .then(getImgurPosts)
-  .then(extendMetaData)
-  .then(downloadImages)
-  .catch(console.error);
+const startAfter = (process.env.START_AFTER) ? process.env.START_AFTER : "";
+const queue = new Queue(fetchFeed, {batchSize: 1, afterProcessDelay: 3000});
+queue.push(startAfter, (error, result) => {  // Start with latest.
+  if (error) {
+    console.error(error);
+  } else if (result) {
+    console.log("success");
+  } else {
+    console.log("failure");
+  }
+});
+
