@@ -24,6 +24,7 @@ IMGUR_CLIENT_SECRET="imgur client secret"
 
 ENABLE_LOG_SUMMARY="true or false value to enable more robust logging"
 DESTINATION="where to drop off image and pdf"
+CONNECTIONS=integer value of sockets to use for requests
 ```
 `.env` variables needed to be defined.
 

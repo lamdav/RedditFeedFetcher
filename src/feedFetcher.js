@@ -7,7 +7,9 @@ const PDFDocument = require("pdfkit");
 const parse = require('url-parse');
 const path = require("path");
 const mkdirp = require("mkdirp");
+const http = require("http");
 
+const agent = new http.Agent({maxSockets: process.env.CONNECTIONS, keepAlive: true});
 const parser = new Parser({item: ["title"]});
 
 /**
@@ -26,12 +28,11 @@ const getHrefsFromFeed = (feed) => {
     }
 
     const $ = cheerio.load(item.content);
-
     const links = $("a").map((index, element) => ("href" in element.attribs) ? element.attribs.href : null)
       .get()
       .filter((element) => element != null);
     // Reddit title is more reliable than imgur titles (may be null)
-    links.push(item.title);
+    links.push(item.title.replace("/", "-"));
     return links;
   });
 }
@@ -88,13 +89,13 @@ const extendMetaData = (hrefObjs) => {
  * @param {Array<Object>} extendObjs Array of Objects with keys: poster, subreddit, link, comments, title, subredditSource, and imgurHash.
  */
 const downloadImages = (extendObjs) => {
-  extendObjs.forEach((extendObj) => {
+    return Promise.all(extendObjs.map((extendObj) => {
     const destinationBase = path.join(process.env.DESTINATION, extendObj.subredditSource, extendObj.title);
     if (!fs.existsSync(destinationBase)) {
       mkdirp.sync(destinationBase);
     }
-    downloadAlbum(extendObj.imgurHash, destinationBase);
-  });
+    return downloadAlbum(extendObj.imgurHash, destinationBase);
+  }));
 }
 
 /**
@@ -109,9 +110,10 @@ const downloadAlbum = (imgurHash, destinationBase) => {
     headers: {
       "Authorization": `Client-ID ${process.env.IMGUR_CLIENT_SECRET}`
     },
-    json: true
+    json: true,
+    pool: agent
   };
-  rp(options)
+  return rp(options)
     .then((response) => {
       if ("data" in response && "images" in response.data) {
         return response.data.images.map((image) => { return {link: image.link, type: image.type} });
@@ -126,12 +128,22 @@ const downloadAlbum = (imgurHash, destinationBase) => {
           encoding: null,
           headers: {
             "Content-type": link.type
-          }
+          },
+          pool: agent
         };
+        const filetype = link.type.substring(link.type.lastIndexOf("/") + 1, link.type.length);
+        const filename = (pageNum <= 9) ? `page_0${pageNum}.${filetype}` : `page_${pageNum}.${filetype}`;
+        const filepath =  path.join(destinationBase, filename);
+
+        if (fs.existsSync(filepath)) {
+          console.log(`${filepath} already exists...skipping fetch`);
+          return Promise.resolve(filepath);
+        } else {
+          console.log(`${filepath}...fetching`);
+        }
+
         return rp(options)
           .then((response) => {
-            const filename = (pageNum <= 9) ? `page_0${pageNum}.png` : `page_${pageNum}.png`;
-            const filepath =  path.join(destinationBase, filename);
             const buffer = Buffer.from(response);
             fs.writeFileSync(filepath, buffer);
             return filepath;
@@ -149,11 +161,16 @@ const downloadAlbum = (imgurHash, destinationBase) => {
       if (filePaths.length < 1) {
         return;
       }
-      const doc = new PDFDocument({autoFirstPage: false});
+
       const title = path.basename(path.dirname(filePaths[0]));
       const filepath = path.join(destinationBase, `${title}.pdf`);
-      doc.pipe(fs.createWriteStream(filepath));
-      
+      if (fs.existsSync(filepath)) {
+        console.log(`${filepath} already exists...skipping create`);
+        return;
+      }
+
+      const doc = new PDFDocument({autoFirstPage: false});
+      doc.pipe(fs.createWriteStream(filepath)); 
       let image = doc.openImage(filePaths[0]);
       doc.addPage({size: [image.width, image.height]});
       doc.image(image, 0, 0);
@@ -174,8 +191,5 @@ parser.parseURL(process.env.REDDIT_SAVED_RSS_FEED)
   .then(getImgurPosts)
   .then(extendMetaData)
   .then(downloadImages)
+  .then(() => console.log("done"))
   .catch(console.error);
-
-
-
-
