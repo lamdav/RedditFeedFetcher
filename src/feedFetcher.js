@@ -13,7 +13,7 @@ const Queue = require("better-queue");
 
 PromiseBar.enable();
 
-const connections = (process.env.CONNECTIONS) ? process.env.CONNECTIONS : 10;
+const connections = (process.env.CONNECTIONS) ? parseInt(process.env.CONNECTIONS) : 10;
 const agent = new http.Agent({maxSockets: process.env.CONNECTIONS, keepAlive: true});
 const parser = new Parser({item: ["title", "id"]});
 
@@ -88,7 +88,7 @@ const extendMetaData = (hrefObjs) => {
 
     let imgurLink = hrefObj.link;
     if (imgurLink.endsWith("/")) {
-      imgurLink = imgurLink.subreddit(0, imgurLink.length - 1);
+      imgurLink = imgurLink.substring(0, imgurLink.length - 1);
     }
     const imgurHash = imgurLink.substring(imgurLink.lastIndexOf("/") + 1, imgurLink.length);
     return Object.assign(hrefObj, {subredditSource, imgurHash});
@@ -206,7 +206,7 @@ const downloadAlbum = (imgurHash, destinationBase) => {
 }
 
 const fetchMore = (id) => {
-  console.log(id);
+  console.log(`id: ${id}`);
   queue.push(id);
 }
 
