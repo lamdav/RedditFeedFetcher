@@ -1,6 +1,7 @@
 # Reddit Feed Fetcher
 Consume Reddit Feed and Download Imgur Albums
 
+
 ## Motive
 I wanted some script/program that could listen in on my saved post and check if it was an imgur album 
 it could download and store for future use/backup.
@@ -10,6 +11,7 @@ I can periodically listen/query this endpoint to fetch for new post I have saved
 rudimentary checking before downloading the album (i.e. check if its an imgur posts, from a particular sub,
 etc.). From there, I can use parse out information to pass into the imgur API to fetch the raw image
 links.
+
 
 ## Notes
 This project is still pretty buggy and inefficient. I should probably use a connection pool and
@@ -24,6 +26,8 @@ together quickly one night.
 - [x] Avoid fetching existing images based on path
 - [ ] Add rate limiting mitigations/throttling
 - [ ] Add option to only process recent items
+- [ ] Fix occassional hiccups with `undefined` path args and timeout (`x` number of retries?)
+
 
 ## Structure
 ```
@@ -55,3 +59,15 @@ imgur servers too frequently.
 
 PDF stitch will always be regenerated. I currently do not have a way to detect if a previously
 missing image has been fetched (i.e. missing because of rate limiting/partial batch processing).
+
+
+## How to use
+1. `git clone https://github.com/lamdaV/RedditFeedFetcher.git`
+2. `yarn install` or `npm install`
+3. create a `.env` file and fill out relevant information (see above)
+  a. [Reddit RSS Wiki](https://www.reddit.com/wiki/rss)
+  b. [Reddit RSS Personalized Feed](https://redditblog.com/2010/02/02/feed-me/)
+  c. [Imgur Client Secret](https://apidocs.imgur.com/)
+4. `yarn start` or `npm run start`
+  a. On Linux or OSX environment, run `yarn start | tee path/to/output.log` for both stdout logging
+     and file logging.
