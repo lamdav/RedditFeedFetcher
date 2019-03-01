@@ -65,9 +65,9 @@ missing image has been fetched (i.e. missing because of rate limiting/partial ba
 1. `git clone https://github.com/lamdaV/RedditFeedFetcher.git`
 2. `yarn install` or `npm install`
 3. create a `.env` file and fill out relevant information (see above)
-  a. [Reddit RSS Wiki](https://www.reddit.com/wiki/rss)
-  b. [Reddit RSS Personalized Feed](https://redditblog.com/2010/02/02/feed-me/)
-  c. [Imgur Client Secret](https://apidocs.imgur.com/)
+   - [Reddit RSS Wiki](https://www.reddit.com/wiki/rss)
+   - [Reddit RSS Personalized Feed](https://redditblog.com/2010/02/02/feed-me/)
+   - [Imgur Client Secret](https://apidocs.imgur.com/)
 4. `yarn start` or `npm run start`
-  a. On Linux or OSX environment, run `yarn start | tee path/to/output.log` for both stdout logging
+   - On Linux or OSX environment, run `yarn start | tee path/to/output.log` for both stdout logging
      and file logging.
