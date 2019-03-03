@@ -8,13 +8,10 @@ const parse = require('url-parse');
 const path = require("path");
 const mkdirp = require("mkdirp");
 const http = require("http");
-const PromiseBar = require("promise.bar");
 const Queue = require("better-queue");
 
-PromiseBar.enable();
-
 const connections = (process.env.CONNECTIONS) ? parseInt(process.env.CONNECTIONS) : 10;
-const agent = new http.Agent({maxSockets: process.env.CONNECTIONS, keepAlive: true});
+const agent = new http.Agent({maxSockets: connections, keepAlive: true});
 const parser = new Parser({item: ["title", "id"]});
 
 /**
