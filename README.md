@@ -25,7 +25,7 @@ together quickly one night.
 - [x] Add ability to skip processed items on rate limit
 - [x] Avoid fetching existing images based on path
 - [ ] Add rate limiting mitigations/throttling
-- [ ] Add option to only process recent items
+- [x] Add option to only process recent items
 - [ ] Fix occassional hiccups with `undefined` path args and timeout (`x` number of retries?)
 
 
@@ -38,6 +38,7 @@ ENABLE_LOG_SUMMARY="true or false value to enable more robust logging"
 DESTINATION="where to drop off image and pdf"
 CONNECTIONS=integer value of sockets to use for requests
 START_AFTER="reddit id to start after"
+SINGLE_BATCH="if defined, only one batch will execute"
 ```
 `.env` variables needed to be defined.
 
