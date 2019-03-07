@@ -34,7 +34,7 @@ const getHrefsFromFeed = (feed, fetchMore) => {
     const links = $("a").map((index, element) => ("href" in element.attribs) ? element.attribs.href : null)
       .get()
       .filter((element) => element != null);
-    // Reddit title is more reliable than imgur titles (may be null)
+    // Reddit title are more reliable than imgur titles (may be null)
     links.push(item.title.replace("/", "-").trim());
     return links;
   });
@@ -203,8 +203,10 @@ const downloadAlbum = (imgurHash, destinationBase) => {
 }
 
 const fetchMore = (id) => {
-  console.log(`id: ${id}`);
-  queue.push(id);
+  if (!process.env.SINGLE_BATCH) {
+    console.log(`id: ${id}`);
+    queue.push(id);
+  }
 }
 
 const fetchFeed = (after, cb) => {
