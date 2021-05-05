@@ -12,6 +12,7 @@
     "better-queue": "^3.8.10",
     "cheerio": "^1.0.0-rc.2",
     "dotenv": "^6.2.0",
+    "emoji-strip": "^1.0.1",
     "mkdirp": "^0.5.1",
     "pdfkit": "^0.9.0",
     "request": "^2.88.0",

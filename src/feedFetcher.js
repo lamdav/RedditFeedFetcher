@@ -9,6 +9,7 @@ const path = require("path");
 const mkdirp = require("mkdirp");
 const http = require("http");
 const Queue = require("better-queue");
+const emojiStrip = require("emoji-strip");
 
 const connections = (process.env.CONNECTIONS) ? parseInt(process.env.CONNECTIONS) : 10;
 const agent = new http.Agent({maxSockets: connections, keepAlive: true});
@@ -99,7 +100,9 @@ const extendMetaData = (hrefObjs) => {
  */
 const downloadImages = (extendObjs) => {
   return Promise.all(extendObjs.map((extendObj) => {
-    const destinationBase = path.join(process.env.DESTINATION, extendObj.subredditSource, extendObj.title);
+    const destinationBase = emojiStrip(
+      path.join(process.env.DESTINATION, extendObj.subredditSource, extendObj.title)
+    );
     if (!fs.existsSync(destinationBase)) {
       mkdirp.sync(destinationBase);
     }
